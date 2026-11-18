@@ -97,9 +97,7 @@
   .todaycard .meta b { color:var(--label); font-weight:600; }
   #shiftBtn { grid-column:1 / -1; margin-top:10px; min-height:44px; background:var(--good-soft); color:var(--good); }
   #shiftBtn.on { background:var(--bad-soft); color:var(--bad); }
-  #shiftBtn.on::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--bad);
-                         animation:pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity:.25; } }
+  #shiftBtn.on::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--bad); }
 
   /* ---- Verdict: semnalul pe care îl vezi dintr-o privire ---- */
   .verdict-card { background:var(--surface); border-radius:16px; overflow:hidden; margin-top:12px; }
@@ -177,7 +175,7 @@
             -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
             border-top:.5px solid var(--sep); }
   .tabbar button { height:var(--tabbar); border:0; background:transparent; color:#8e8e93; font:inherit;
-                   font-size:.6rem; font-weight:500; display:flex; flex-direction:column; align-items:center;
+                   font-size:max(11px, .647rem); font-weight:500; display:flex; flex-direction:column; align-items:center;
                    justify-content:center; gap:3px; cursor:pointer; padding:0; }
   .tabbar button[aria-selected="true"] { color:var(--tint); }
   .tabbar .ico { width:26px; height:26px; }
