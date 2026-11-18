@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Test verdict
         run: |
           node -e "
@@ -24,10 +24,10 @@ jobs:
           "
 
   build:
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Pagina în aplicație
         run: |
