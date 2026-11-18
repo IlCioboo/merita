@@ -81,9 +81,9 @@
 <h2>Comanda <span id="platform"></span></h2>
 <div class="card">
   <div class="row">
-    <div><label>Câștig (RON)</label><input id="earnings" type="number" inputmode="decimal" step="0.01"></div>
-    <div><label>Distanță (km)</label><input id="km" type="number" inputmode="decimal" step="0.1"></div>
-    <div><label>Timp (min)</label><input id="minutes" type="number" inputmode="numeric" placeholder="auto"></div>
+    <div><label>Câștig (RON)</label><input id="earnings" type="text" autocomplete="off" inputmode="decimal" step="0.01"></div>
+    <div><label>Distanță (km)</label><input id="km" type="text" autocomplete="off" inputmode="decimal" step="0.1"></div>
+    <div><label>Timp (min)</label><input id="minutes" type="text" autocomplete="off" inputmode="numeric" placeholder="auto"></div>
   </div>
   <label>Aplicație</label>
   <select id="platformSel">
@@ -109,20 +109,20 @@
     <label>Vehicul</label>
     <select id="vehicle"></select>
     <div class="row">
-      <div><label id="consLabel">Consum /100km</label><input id="consumption" type="number" step="0.1" inputmode="decimal"></div>
-      <div><label id="priceLabel">Preț RON/l</label><input id="price" type="number" step="0.01" inputmode="decimal"></div>
-      <div><label>Uzură RON/km</label><input id="maint" type="number" step="0.01" inputmode="decimal"></div>
+      <div><label id="consLabel">Consum /100km</label><input id="consumption" type="text" autocomplete="off" inputmode="decimal"></div>
+      <div><label id="priceLabel">Preț RON/l</label><input id="price" type="text" autocomplete="off" inputmode="decimal"></div>
+      <div><label>Uzură RON/km</label><input id="maint" type="text" autocomplete="off" inputmode="decimal"></div>
     </div>
     <div class="row">
-      <div><label>Viteză medie km/h</label><input id="speed" type="number" inputmode="decimal"></div>
-      <div><label>Așteptare (min)</label><input id="waitMin" type="number" inputmode="numeric"></div>
-      <div><label>Km retur (%)</label><input id="returnPct" type="number" inputmode="numeric"></div>
+      <div><label>Viteză medie km/h</label><input id="speed" type="text" autocomplete="off" inputmode="decimal"></div>
+      <div><label>Așteptare (min)</label><input id="waitMin" type="text" autocomplete="off" inputmode="numeric"></div>
+      <div><label>Km retur (%)</label><input id="returnPct" type="text" autocomplete="off" inputmode="numeric"></div>
     </div>
     <label>Comision flotă / taxe (%)</label>
-    <input id="commissionPct" type="number" step="0.5" inputmode="decimal">
+    <input id="commissionPct" type="text" autocomplete="off" inputmode="decimal">
     <div class="row2">
-      <div><label>Minim RON net/km</label><input id="minPerKm" type="number" step="0.1" inputmode="decimal"></div>
-      <div><label>Minim RON net/oră</label><input id="minPerHour" type="number" step="1" inputmode="numeric"></div>
+      <div><label>Minim RON net/km</label><input id="minPerKm" type="text" autocomplete="off" inputmode="decimal"></div>
+      <div><label>Minim RON net/oră</label><input id="minPerHour" type="text" autocomplete="off" inputmode="numeric"></div>
     </div>
     <p class="muted">Uzura include anvelope, revizii, ulei. Km retur = cât mai conduci după livrare ca să revii într-o zonă bună. Timpul se estimează din viteza medie dacă nu apare în comandă.</p>
   </details>
@@ -195,10 +195,15 @@
   Object.entries(Core.VEHICLES).forEach(([k, v]) => {
     const o = document.createElement('option'); o.value = k; o.textContent = v.label; $('vehicle').appendChild(o);
   });
+  // Numere: „4,75” sau „4.75” → 4.75; afișăm cu virgulă, ca tastatura în română
+  function num(v) { return parseFloat(String(v == null ? '' : v).replace(/s/g, '').replace(',', '.')); }
+  function show(v) { return v == null || v === '' || isNaN(v) ? '' : String(v).replace('.', ','); }
+
   function fillSettings() {
     nativePost({ type: 'settings', settings: JSON.stringify(settings) });
     $('vehicle').value = settings.vehicle;
-    settingFields.forEach(f => { $(f).value = settings[f]; });
+    // Nu rescriem căsuța în care scrii acum (altfel virgula/punctul dispar)
+    settingFields.forEach(f => { if (document.activeElement !== $(f)) $(f).value = show(settings[f]); });
     const unit = (Core.VEHICLES[settings.vehicle] || {}).unit || 'l';
     $('consLabel').textContent = unit + ' /100km';
     $('priceLabel').textContent = 'RON/' + unit;
@@ -212,12 +217,13 @@
     save(SETTINGS_KEY, settings); fillSettings(); recompute();
   });
   settingFields.forEach(f => $(f).addEventListener('input', () => {
-    settings[f] = parseFloat($(f).value) || 0; save(SETTINGS_KEY, settings); fillSettings(); recompute();
+    settings[f] = num($(f).value) || 0; save(SETTINGS_KEY, settings); fillSettings(); recompute();
   }));
+  settingFields.forEach(f => $(f).addEventListener('blur', () => { $(f).value = show(settings[f]); }));
 
   // ---- Calcul ----
   function currentOrder() {
-    return { earnings: parseFloat($('earnings').value), km: parseFloat($('km').value), minutes: parseFloat($('minutes').value) };
+    return { earnings: num($('earnings').value), km: num($('km').value), minutes: num($('minutes').value) };
   }
   let lastResult = null;
   function recompute() {
@@ -251,9 +257,9 @@
     lastPlatform = p.platform;
     $('platformSel').value = p.platform || '';
     $('platform').textContent = p.platform ? '· ' + p.platform : '';
-    $('earnings').value = p.earnings != null ? p.earnings : '';
-    $('km').value = p.km != null ? p.km : '';
-    $('minutes').value = p.minutes != null ? p.minutes : '';
+    $('earnings').value = show(p.earnings);
+    $('km').value = show(p.km);
+    $('minutes').value = show(p.minutes);
     const miss = [];
     if (p.earnings == null) miss.push('câștig'); if (p.km == null && p.minutes == null) miss.push('km');
     setStatus((source ? source + ': ' : '') + (miss.length ? 'nu am găsit ' + miss.join(', ') + ' — completează manual.' : 'citit. Verifică valorile de sus.'));
