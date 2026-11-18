@@ -1,5 +1,5 @@
 // Service worker: merge offline + primeste screenshot-uri prin "Distribuie" pe Android.
-const APP = 'merita-v2';
+const APP = 'merita-v3';
 const FILES = ['./', 'index.html', 'core.js', 'journal.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
