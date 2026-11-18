@@ -7,6 +7,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Verificare rapidă (Linux): verdictul pentru notificare iese corect din core.js + check.js
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test verdict
+        run: |
+          node -e "
+            require('./core.js');
+            eval(require('fs').readFileSync('ios/Merita/check.js', 'utf8'));
+            const r = JSON.parse(meritaCheck('~11 min\n~13 min\n24 min, 22,73 RON', '{}', 1));
+            console.log(r.title + '\n' + r.body);
+            if (!r.ok || r.trip.net !== 15.98) process.exit(1);
+          "
+
   build:
     runs-on: macos-15
     timeout-minutes: 30
