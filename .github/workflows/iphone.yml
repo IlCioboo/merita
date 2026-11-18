@@ -1,0 +1,47 @@
+# Construiește aplicația de iPhone pe un Mac de la GitHub (gratuit) și scoate Merita.ipa.
+# Fișierul .ipa e nesemnat: îl semnează Sideloadly cu Apple ID-ul tău când îl instalezi.
+name: iPhone
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pagina în aplicație
+        run: |
+          mkdir -p ios/Merita/web
+          cp index.html core.js journal.js icon-192.png ios/Merita/web/
+
+      - name: Proiect Xcode
+        run: |
+          brew install xcodegen
+          cd ios && xcodegen generate
+
+      - name: Construire
+        run: |
+          cd ios
+          xcodebuild -project Merita.xcodeproj -scheme Merita -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build > build.log 2>&1 || { grep -E "error:" build.log | sort -u | head -60; tail -n 40 build.log; exit 1; }
+          grep -E "warning:.*\.swift" build.log | sort -u | head -30 || true
+          test -d build/Build/Products/Release-iphoneos/Merita.app
+
+      - name: Merita.ipa
+        run: |
+          cd ios/build/Build/Products/Release-iphoneos
+          mkdir -p Payload
+          cp -R Merita.app Payload/
+          zip -qry "$GITHUB_WORKSPACE/Merita.ipa" Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Merita-iPhone
+          path: Merita.ipa
+          retention-days: 30

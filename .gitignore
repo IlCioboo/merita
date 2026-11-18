@@ -1,0 +1,18 @@
+# Android: fișiere de build și locale
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.keystore
+*.jks
+*.apk
+
+# iPhone: generate pe Mac-ul din GitHub Actions
+ios/build/
+ios/Merita.xcodeproj/
+ios/Merita/Info.plist
+ios/Merita/web/
+*.ipa
+
+# Copia pentru Netlify (aceleași fișiere ca în rădăcină)
+merita-web/

@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Merită cursa?</title>
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Merită?">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root { --bg:#111; --card:#1d1d1d; --text:#eee; --muted:#999; --line:#333;
+          --good:#1f9d55; --meh:#d69e2e; --bad:#c53030; --accent:#3182ce; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:16px/1.4 -apple-system, system-ui, Segoe UI, Roboto, sans-serif;
+         padding: env(safe-area-inset-top) 16px 40px; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:24px 0 8px; }
+  .card { background:var(--card); border-radius:12px; padding:14px; margin:10px 0; }
+  #verdict { text-align:center; font-size:30px; font-weight:800; padding:22px 10px; border-radius:12px;
+             margin-top:14px; background:var(--line); }
+  #verdict.good { background:var(--good); } #verdict.meh { background:var(--meh); color:#111; }
+  #verdict.bad { background:var(--bad); }
+  #verdict small { display:block; font-size:14px; font-weight:500; opacity:.85; margin-top:4px; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stat { background:var(--card); border-radius:10px; padding:10px; }
+  .stat b { display:block; font-size:22px; }
+  .stat span { color:var(--muted); font-size:13px; }
+  label { display:block; font-size:13px; color:var(--muted); margin-top:10px; }
+  input, select, textarea { width:100%; font:inherit; color:var(--text); background:#000;
+                            border:1px solid var(--line); border-radius:8px; padding:10px; margin-top:4px; }
+  textarea { min-height:90px; font-size:13px; }
+  .row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  button, .btn { display:block; width:100%; text-align:center; font:inherit; font-weight:600; color:#fff;
+                 background:var(--accent); border:0; border-radius:10px; padding:13px; margin-top:10px; cursor:pointer; }
+  .btn.secondary, button.secondary { background:#333; }
+  #status { color:var(--muted); font-size:13px; min-height:18px; margin-top:8px; }
+  details summary { cursor:pointer; font-weight:600; padding:4px 0; }
+  .hist { font-size:14px; display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding:6px 0; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+  .muted { color:var(--muted); font-size:13px; }
+  #shiftBtn { margin:12px 0 0; background:#2f855a; }
+  #shiftBtn.on { background:#9b2c2c; }
+  .calnav { display:grid; grid-template-columns:52px 1fr 52px; gap:8px; align-items:center; }
+  .calnav button { margin:0; padding:10px 0; background:#333; }
+  .calnav b { text-align:center; font-size:17px; }
+  .grid { display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; margin-top:10px; }
+  .grid .wd { text-align:center; font-size:11px; color:var(--muted); }
+  .grid .day { background:#000; border:1px solid var(--line); border-radius:8px; min-height:48px; padding:3px 2px;
+               text-align:center; font-size:13px; cursor:pointer; }
+  .grid .day small { display:block; font-size:10.5px; color:var(--muted); margin-top:2px; overflow:hidden; }
+  .grid .day.has { border-color:#2f855a; }
+  .grid .day.has small { color:#68d391; }
+  .grid .day.today { outline:2px solid var(--accent); }
+  .grid .day.sel { background:#2a4365; }
+  .sum { white-space:pre-line; font-size:14px; }
+  .trip { display:grid; grid-template-columns:1fr auto auto; gap:6px; align-items:center;
+          border-bottom:1px solid var(--line); padding:7px 0; font-size:14px; }
+  .trip button { margin:0; padding:7px 10px; width:auto; background:#333; font-size:13px; }
+  .trip .info small { color:var(--muted); display:block; font-size:12px; }
+  pre#statsOut { white-space:pre; overflow-x:auto; font-size:12px; background:#000; border-radius:8px; padding:10px; }
+</style>
+</head>
+<body>
+
+<button id="shiftBtn">▶ Încep tura</button>
+
+<div id="verdict">Încarcă o comandă<small>screenshot, text sau introdu manual</small></div>
+
+<div class="stats" style="margin-top:8px">
+  <div class="stat"><b id="sNet">–</b><span>profit net (RON)</span></div>
+  <div class="stat"><b id="sKm">–</b><span>RON net / km</span></div>
+  <div class="stat"><b id="sHour">–</b><span>RON net / oră</span></div>
+  <div class="stat"><b id="sCost">–</b><span>cost drum (RON)</span></div>
+</div>
+<div class="muted" id="details" style="margin-top:6px"></div>
+
+<h2>Comanda <span id="platform"></span></h2>
+<div class="card">
+  <div class="row">
+    <div><label>Câștig (RON)</label><input id="earnings" type="number" inputmode="decimal" step="0.01"></div>
+    <div><label>Distanță (km)</label><input id="km" type="number" inputmode="decimal" step="0.1"></div>
+    <div><label>Timp (min)</label><input id="minutes" type="number" inputmode="numeric" placeholder="auto"></div>
+  </div>
+  <label>Aplicație</label>
+  <select id="platformSel">
+    <option value="">—</option><option>Glovo</option><option>Wolt</option><option>Uber Eats</option><option>Bolt Food</option>
+  </select>
+  <label class="btn" for="file" id="fileLabel">📷 Alege screenshot</label>
+  <input id="file" type="file" accept="image/*" hidden>
+  <button class="secondary" id="pasteBtn">📋 Lipește din clipboard</button>
+  <div id="status"></div>
+  <details style="margin-top:10px">
+    <summary>Text citit de pe ecran</summary>
+    <textarea id="raw" placeholder="Poți lipi aici textul comenzii"></textarea>
+    <button class="secondary" id="parseBtn">Analizează textul</button>
+  </details>
+  <button id="takeBtn">✓ Am luat-o — salvează în calendar</button>
+  <button id="skipBtn" class="secondary">✖ Am refuzat-o (o număr doar la oferte)</button>
+</div>
+
+<h2>Vehicul și praguri</h2>
+<div class="card">
+  <details id="settingsBox">
+    <summary id="settingsSummary">Setări</summary>
+    <label>Vehicul</label>
+    <select id="vehicle"></select>
+    <div class="row">
+      <div><label id="consLabel">Consum /100km</label><input id="consumption" type="number" step="0.1" inputmode="decimal"></div>
+      <div><label id="priceLabel">Preț RON/l</label><input id="price" type="number" step="0.01" inputmode="decimal"></div>
+      <div><label>Uzură RON/km</label><input id="maint" type="number" step="0.01" inputmode="decimal"></div>
+    </div>
+    <div class="row">
+      <div><label>Viteză medie km/h</label><input id="speed" type="number" inputmode="decimal"></div>
+      <div><label>Așteptare (min)</label><input id="waitMin" type="number" inputmode="numeric"></div>
+      <div><label>Km retur (%)</label><input id="returnPct" type="number" inputmode="numeric"></div>
+    </div>
+    <label>Comision flotă / taxe (%)</label>
+    <input id="commissionPct" type="number" step="0.5" inputmode="decimal">
+    <div class="row2">
+      <div><label>Minim RON net/km</label><input id="minPerKm" type="number" step="0.1" inputmode="decimal"></div>
+      <div><label>Minim RON net/oră</label><input id="minPerHour" type="number" step="1" inputmode="numeric"></div>
+    </div>
+    <p class="muted">Uzura include anvelope, revizii, ulei. Km retur = cât mai conduci după livrare ca să revii într-o zonă bună. Timpul se estimează din viteza medie dacă nu apare în comandă.</p>
+  </details>
+</div>
+
+<h2>Calendar</h2>
+<div class="card">
+  <div class="calnav">
+    <button id="prevM" aria-label="Luna trecută">‹</button>
+    <b id="monthTitle"></b>
+    <button id="nextM" aria-label="Luna viitoare">›</button>
+  </div>
+  <div class="sum" id="monthSum" style="margin-top:10px"></div>
+  <div class="grid" id="grid"></div>
+  <div class="row2">
+    <button class="secondary" id="statsBtn">📊 Statistici</button>
+    <button class="secondary" id="csvMonth">📤 Excel luna</button>
+  </div>
+</div>
+
+<div class="card" id="dayBox" hidden>
+  <b id="dayTitle"></b>
+  <div class="sum" id="daySum" style="margin-top:6px"></div>
+  <div id="dayShift" class="muted" style="margin-top:6px; cursor:pointer"></div>
+  <div id="dayTrips" style="margin-top:6px"></div>
+  <p class="muted">✅ = luată (intră în totaluri) · ◻ = doar văzută · ✖ = refuzată. Atinge starea ca s-o schimbi, 🗑 ca s-o ștergi.</p>
+  <button class="secondary" id="delDay">🗑 Șterge toate cursele din ziua asta</button>
+</div>
+
+<div class="card" id="statsBox" hidden>
+  <div class="row2">
+    <button class="secondary" id="statsMonth" style="margin-top:0">Doar luna</button>
+    <button class="secondary" id="statsAll" style="margin-top:0">Tot istoricul</button>
+  </div>
+  <pre id="statsOut"></pre>
+</div>
+
+<h2>Backup și export</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0">Cursele stau doar în telefonul ăsta. Fă din când în când un backup (îl poți pune în Fișiere / iCloud). Backup-ul merge și în aplicația de Android.</p>
+  <button class="secondary" id="backupBtn">💾 Salvează backup</button>
+  <label class="btn secondary" for="restoreFile" style="background:#333">♻️ Restaurează din backup</label>
+  <input id="restoreFile" type="file" accept=".json,application/json" hidden>
+  <button class="secondary" id="csvAll">📤 Export Excel — toate cursele</button>
+</div>
+
+<script src="core.js"></script>
+<script src="journal.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const SETTINGS_KEY = 'merita.settings';
+  const settingFields = ['consumption','price','maint','speed','waitMin','returnPct','commissionPct','minPerKm','minPerHour'];
+
+  function load(key, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; }
+    catch (e) { return fallback; }
+  }
+  function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+
+  let settings = Object.assign({}, Core.DEFAULT_SETTINGS, load(SETTINGS_KEY, {}));
+
+  // În aplicația de iPhone pagina vorbește cu partea nativă (Scurtături, notificări, Fișiere, Poze)
+  const NATIVE = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.merita;
+  function nativePost(m) { try { if (NATIVE) NATIVE.postMessage(m); } catch (e) {} }
+  let lastPlatform = '';
+
+  // ---- Setari ----
+  Object.entries(Core.VEHICLES).forEach(([k, v]) => {
+    const o = document.createElement('option'); o.value = k; o.textContent = v.label; $('vehicle').appendChild(o);
+  });
+  function fillSettings() {
+    nativePost({ type: 'settings', settings: JSON.stringify(settings) });
+    $('vehicle').value = settings.vehicle;
+    settingFields.forEach(f => { $(f).value = settings[f]; });
+    const unit = (Core.VEHICLES[settings.vehicle] || {}).unit || 'l';
+    $('consLabel').textContent = unit + ' /100km';
+    $('priceLabel').textContent = 'RON/' + unit;
+    $('settingsSummary').textContent = 'Setări — ' + (Core.VEHICLES[settings.vehicle] || {}).label +
+      ', min ' + settings.minPerKm + ' RON/km, ' + settings.minPerHour + ' RON/h';
+  }
+  $('vehicle').addEventListener('change', () => {
+    const p = Core.VEHICLES[$('vehicle').value];
+    settings.vehicle = $('vehicle').value;
+    ['consumption','price','maint','speed'].forEach(f => { settings[f] = p[f]; });
+    save(SETTINGS_KEY, settings); fillSettings(); recompute();
+  });
+  settingFields.forEach(f => $(f).addEventListener('input', () => {
+    settings[f] = parseFloat($(f).value) || 0; save(SETTINGS_KEY, settings); fillSettings(); recompute();
+  }));
+
+  // ---- Calcul ----
+  function currentOrder() {
+    return { earnings: parseFloat($('earnings').value), km: parseFloat($('km').value), minutes: parseFloat($('minutes').value) };
+  }
+  let lastResult = null;
+  function recompute() {
+    const o = currentOrder();
+    const v = $('verdict');
+    if (!(o.earnings > 0) || !(o.km > 0 || o.minutes > 0)) {
+      v.className = ''; lastResult = null;
+      v.innerHTML = 'Lipsesc date<small>' + (!(o.earnings > 0) ? 'câștigul ' : '') + (!(o.km > 0 || o.minutes > 0) ? 'distanța sau minutele' : '') + '</small>';
+      ['sNet','sKm','sHour','sCost'].forEach(id => $(id).textContent = '–');
+      $('details').textContent = '';
+      return;
+    }
+    const r = Core.calculate(o, settings);
+    lastResult = { o, r };
+    const text = { good: 'MERITĂ ✅', meh: 'LA LIMITĂ ⚠️', bad: 'NU MERITĂ ❌' }[r.verdict];
+    v.className = r.verdict;
+    v.innerHTML = text + '<small>' + r.perKm + ' RON/km · ' + r.perHour + ' RON/h · net ' + r.net + ' RON</small>';
+    $('sNet').textContent = r.net.toFixed(2);
+    $('sKm').textContent = r.perKm.toFixed(2);
+    $('sHour').textContent = r.perHour.toFixed(0);
+    $('sCost').textContent = r.cost.toFixed(2);
+    $('details').textContent = r.kmTotal + ' km' + (r.estimatedKm ? ' (estimat din minute)' : '') + ' · ~' + r.minutes + ' min' + (r.estimatedTime ? ' (estimat)' : '') +
+      ' · cost ' + r.costPerKm + ' RON/km' + (settings.commissionPct ? ' · după comision ' + r.gross + ' RON' : '') +
+      ' · minim ca să merite ' + r.minEarnings + ' RON';
+  }
+  ['earnings','km','minutes'].forEach(id => $(id).addEventListener('input', recompute));
+
+  function applyText(text, source) {
+    $('raw').value = text;
+    const p = Core.parseOrder(text);
+    lastPlatform = p.platform;
+    $('platformSel').value = p.platform || '';
+    $('platform').textContent = p.platform ? '· ' + p.platform : '';
+    $('earnings').value = p.earnings != null ? p.earnings : '';
+    $('km').value = p.km != null ? p.km : '';
+    $('minutes').value = p.minutes != null ? p.minutes : '';
+    const miss = [];
+    if (p.earnings == null) miss.push('câștig'); if (p.km == null && p.minutes == null) miss.push('km');
+    setStatus((source ? source + ': ' : '') + (miss.length ? 'nu am găsit ' + miss.join(', ') + ' — completează manual.' : 'citit. Verifică valorile de sus.'));
+    recompute();
+  }
+  $('platformSel').addEventListener('change', () => {
+    lastPlatform = $('platformSel').value;
+    $('platform').textContent = lastPlatform ? '· ' + lastPlatform : '';
+  });
+  $('parseBtn').addEventListener('click', () => applyText($('raw').value, 'Text'));
+
+  function setStatus(s) { $('status').textContent = s; }
+
+  // ---- OCR pentru imagini (Android / alegere manuala) ----
+  let ocrScript = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (ocrScript) return ocrScript;
+    ocrScript = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+      s.onload = res; s.onerror = () => { ocrScript = null; rej(new Error('nu am putut încărca OCR (internet?)')); };
+      document.head.appendChild(s);
+    });
+    return ocrScript;
+  }
+  let worker = null;
+  async function ocrImage(blob) {
+    try {
+      setStatus('Citesc imaginea… (prima dată durează mai mult)');
+      await loadTesseract();
+      if (!worker) worker = await Tesseract.createWorker(['ron', 'eng']);
+      const { data } = await worker.recognize(blob);
+      applyText(data.text, 'Imagine');
+    } catch (e) {
+      setStatus('Eroare OCR: ' + e.message);
+    }
+  }
+  $('file').addEventListener('change', e => { const f = e.target.files[0]; if (f) ocrImage(f); e.target.value = ''; });
+
+  $('fileLabel').addEventListener('click', e => {
+    if (NATIVE) { e.preventDefault(); nativePost({ type: 'pickImage' }); }
+  });
+  $('pasteBtn').addEventListener('click', async () => {
+    if (NATIVE) return nativePost({ type: 'paste' });
+    try {
+      if (navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const it of items) {
+          const img = it.types.find(t => t.startsWith('image/'));
+          if (img) return ocrImage(await it.getType(img));
+        }
+      }
+      const t = await navigator.clipboard.readText();
+      if (t) applyText(t, 'Clipboard'); else setStatus('Clipboard gol.');
+    } catch (e) { setStatus('Nu pot citi clipboard-ul: ' + e.message); }
+  });
+
+  // ---- Curse salvate, tură, calendar ----
+  const J = Journal.create(localStorage);
+  const two = n => String(n).padStart(2, '0');
+  const f2 = v => (+v || 0).toFixed(2);
+  const hm = min => Math.floor(min / 60) + ' h ' + (min % 60) + ' min';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const MONTHS = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+
+  function saveTrip(status) {
+    if (!lastResult) return setStatus('Nimic de salvat: completează câștigul și km sau minutele.');
+    const t = J.trips.add(Object.assign({ platform: lastPlatform }, lastResult.o), lastResult.r, status);
+    const d = new Date(t.time);
+    calY = d.getFullYear(); calM = d.getMonth(); selDay = d.getDate();
+    renderCalendar();
+    setStatus(status === Journal.ACCEPTED ? 'Salvată în calendar ✓' : 'Notată ca refuzată.');
+  }
+  $('takeBtn').addEventListener('click', () => saveTrip(Journal.ACCEPTED));
+  $('skipBtn').addEventListener('click', () => saveTrip(Journal.REJECTED));
+
+  function updateShiftButton() {
+    const cur = J.shifts.current();
+    const b = $('shiftBtn');
+    b.classList.toggle('on', !!cur);
+    if (!cur) { b.textContent = '▶ Încep tura'; return; }
+    const d = new Date(cur);
+    const min = Math.floor((Date.now() - cur) / 60000);
+    b.textContent = '⏹ Termin tura (pornită la ' + two(d.getHours()) + ':' + two(d.getMinutes()) + ', ' + hm(min) + ')';
+  }
+  $('shiftBtn').addEventListener('click', () => {
+    if (J.shifts.current()) J.shifts.stop(); else J.shifts.start();
+    updateShiftButton(); renderCalendar();
+  });
+  setInterval(updateShiftButton, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateShiftButton(); renderCalendar(); } });
+
+  const today = new Date();
+  let calY = today.getFullYear(), calM = today.getMonth(), selDay = null;
+
+  function sumText(t, shiftMin) {
+    return 'Curse luate: ' + t.count + (t.offers > t.count ? ' (din ' + t.offers + ' oferte)' : '') + '\n' +
+      'Încasări: ' + f2(t.earnings) + ' RON · Cheltuieli: ' + f2(t.expenses) + ' RON\n' +
+      'Profit net: ' + f2(t.net) + ' RON' + (t.minutes > 0 ? ' · ' + t.perHour.toFixed(0) + ' RON/oră pe curse' : '') +
+      (shiftMin > 0 ? '\nTură ' + hm(shiftMin) + ' · real ' + (t.net / (shiftMin / 60)).toFixed(0) + ' RON/oră (cu așteptarea)' : '');
+  }
+
+  function renderCalendar() {
+    $('monthTitle').textContent = MONTHS[calM] + ' ' + calY;
+    const [mFrom, mTo] = Journal.monthRange(calY, calM);
+    const monthTrips = J.trips.between(mFrom, mTo);
+    const shifts = J.shifts.withRunning();
+    $('monthSum').textContent = sumText(Journal.totals(monthTrips), Journal.minutesIn(shifts, mFrom, mTo));
+
+    const g = $('grid');
+    let html = ['L','Ma','Mi','J','V','S','D'].map(w => '<div class="wd">' + w + '</div>').join('');
+    const first = (new Date(calY, calM, 1).getDay() + 6) % 7;
+    const days = new Date(calY, calM + 1, 0).getDate();
+    for (let i = 0; i < first; i++) html += '<div></div>';
+    for (let d = 1; d <= days; d++) {
+      const [a, b] = Journal.dayRange(calY, calM, d);
+      const t = Journal.totals(monthTrips.filter(x => x.time >= a && x.time < b));
+      const isToday = calY === today.getFullYear() && calM === today.getMonth() && d === today.getDate();
+      html += '<div class="day' + (t.count ? ' has' : '') + (isToday ? ' today' : '') + (d === selDay ? ' sel' : '') +
+        '" data-d="' + d + '">' + d + '<small>' + (t.count ? t.net.toFixed(0) : (t.offers ? '·' : '&nbsp;')) + '</small></div>';
+    }
+    g.innerHTML = html;
+    renderDay();
+  }
+  $('grid').addEventListener('click', e => {
+    const el = e.target.closest('.day');
+    if (!el) return;
+    selDay = +el.dataset.d;
+    renderCalendar();
+    $('dayBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('prevM').addEventListener('click', () => { calM--; if (calM < 0) { calM = 11; calY--; } selDay = null; renderCalendar(); });
+  $('nextM').addEventListener('click', () => { calM++; if (calM > 11) { calM = 0; calY++; } selDay = null; renderCalendar(); });
+
+  const STATUS_ICON = { accepted: '✅', offer: '◻', rejected: '✖' };
+  const NEXT_STATUS = { accepted: 'rejected', rejected: 'offer', offer: 'accepted' };
+  const VERDICT_TXT = { GOOD: 'merită', MEH: 'la limită', BAD: 'nu merită' };
+
+  function renderDay() {
+    const box = $('dayBox');
+    if (!selDay) { box.hidden = true; return; }
+    box.hidden = false;
+    const [a, b] = Journal.dayRange(calY, calM, selDay);
+    const list = J.trips.between(a, b);
+    const shiftMin = Journal.minutesIn(J.shifts.withRunning(), a, b);
+    const wd = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'][new Date(calY, calM, selDay).getDay()];
+    $('dayTitle').textContent = wd + ', ' + selDay + ' ' + MONTHS[calM].toLowerCase() + ' ' + calY;
+    const t = Journal.totals(list);
+    $('daySum').textContent = list.length ? sumText(t, 0) : 'Nicio cursă în ziua asta.';
+    $('dayShift').textContent = shiftMin > 0
+      ? 'Tură: ' + hm(shiftMin) + ' · real ' + (t.net / (shiftMin / 60)).toFixed(0) + ' RON/oră (cu așteptarea) — atinge ca s-o ștergi'
+      : '';
+    $('dayTrips').innerHTML = list.map(x => {
+      const d = new Date(x.time);
+      return '<div class="trip"><div class="info">' + two(d.getHours()) + ':' + two(d.getMinutes()) + ' ' + esc(x.platform || '—') +
+        ' · ' + f2(x.earnings) + ' RON<small>' + f2(x.km) + ' km · ' + (x.minutes || 0) + ' min · net ' + f2(x.net) +
+        ' RON · ' + (VERDICT_TXT[x.verdict] || '') + '</small></div>' +
+        '<button data-st="' + x.id + '" aria-label="Schimbă starea">' + (STATUS_ICON[x.status] || '◻') + '</button>' +
+        '<button data-del="' + x.id + '" aria-label="Șterge cursa">🗑</button></div>';
+    }).join('');
+    $('delDay').hidden = !list.length;
+  }
+  $('dayTrips').addEventListener('click', e => {
+    const st = e.target.closest('[data-st]'), del = e.target.closest('[data-del]');
+    if (st) {
+      const id = +st.dataset.st;
+      const trip = J.trips.all().find(x => x.id === id);
+      if (trip) J.trips.setStatus(id, NEXT_STATUS[trip.status] || 'accepted');
+      renderCalendar();
+    } else if (del) {
+      const id = +del.dataset.del;
+      const trip = J.trips.all().find(x => x.id === id);
+      if (trip && confirm('Ștergi cursa ' + (trip.platform || '') + ' de ' + f2(trip.earnings) + ' RON?')) {
+        J.trips.deleteMany([id]); renderCalendar();
+      }
+    }
+  });
+  $('delDay').addEventListener('click', () => {
+    const [a, b] = Journal.dayRange(calY, calM, selDay);
+    const list = J.trips.between(a, b);
+    if (list.length && confirm('Ștergi toate cele ' + list.length + ' curse din ziua asta? Nu se pot recupera (doar dintr-un backup).')) {
+      J.trips.deleteMany(list.map(x => x.id)); renderCalendar();
+    }
+  });
+  $('dayShift').addEventListener('click', () => {
+    const [a, b] = Journal.dayRange(calY, calM, selDay);
+    if (confirm('Ștergi turele începute în ziua asta? (cursele rămân)')) {
+      J.shifts.deleteStartingIn(a, b); updateShiftButton(); renderCalendar();
+    }
+  });
+
+  // ---- Statistici ----
+  function showStats(allTime) {
+    $('statsBox').hidden = false;
+    let list, title, shiftMin;
+    const shifts = J.shifts.withRunning();
+    if (allTime) {
+      list = J.trips.all(); title = 'Tot istoricul';
+      shiftMin = Journal.minutesIn(shifts, 0, Date.now() + 1);
+    } else {
+      const [a, b] = Journal.monthRange(calY, calM);
+      list = J.trips.between(a, b); title = MONTHS[calM] + ' ' + calY;
+      shiftMin = Journal.minutesIn(shifts, a, b);
+    }
+    $('statsOut').textContent = Journal.report(title, list, shiftMin);
+    $('statsMonth').style.background = allTime ? '#333' : 'var(--accent)';
+    $('statsAll').style.background = allTime ? 'var(--accent)' : '#333';
+  }
+  $('statsBtn').addEventListener('click', () => {
+    if (!$('statsBox').hidden) { $('statsBox').hidden = true; return; }
+    showStats(false); $('statsBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('statsMonth').addEventListener('click', () => showStats(false));
+  $('statsAll').addEventListener('click', () => showStats(true));
+
+  // ---- Backup și Excel ----
+  // Pe iPhone deschidem foaia de partajare (Salvează în Fișiere / iCloud); pe PC descărcăm direct.
+  async function saveFile(name, text, type) {
+    if (NATIVE) return nativePost({ type: 'saveFile', name, text });
+    const blob = new Blob([text], { type });
+    try {
+      const file = new File([blob], name, { type });
+      if (matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  $('backupBtn').addEventListener('click', () =>
+    saveFile(Journal.fileName('merita-backup', 'json'), J.backupJson(settings), 'application/json'));
+  $('csvAll').addEventListener('click', () =>
+    saveFile(Journal.fileName('merita-curse', 'csv'), Journal.csv(J.trips.all()), 'text/csv'));
+  $('csvMonth').addEventListener('click', () => {
+    const [a, b] = Journal.monthRange(calY, calM);
+    saveFile('merita-' + calY + '-' + two(calM + 1) + '.csv', Journal.csv(J.trips.between(a, b)), 'text/csv');
+  });
+  $('restoreFile').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    try {
+      const text = await f.text();
+      if (!confirm('Adaug cursele din backup la cele de aici (nu șterg nimic) și pun setările din backup. Continui?')) return;
+      const r = J.restore(text);
+      if (r.settings) {
+        const keep = Object.keys(Core.DEFAULT_SETTINGS);
+        keep.forEach(k => { if (r.settings[k] != null) settings[k] = r.settings[k]; });
+        save(SETTINGS_KEY, settings); fillSettings(); recompute();
+      }
+      renderCalendar(); updateShiftButton();
+      alert('Restaurat: ' + r.newTrips + ' curse noi (din ' + r.trips + ' în backup), ' + r.shifts + ' ture.');
+    } catch (err) {
+      alert('Nu am putut restaura: ' + err.message);
+    }
+  });
+
+  // ---- Intrari externe ----
+  // iPhone: Scurtatura deschide  .../#t=<text URL-encoded>
+  function readHash() {
+    const m = location.hash.match(/[#&]t=([^&]*)/);
+    if (m) {
+      let t; try { t = decodeURIComponent(m[1].replace(/\+/g, ' ')); } catch (e) { t = m[1]; }
+      applyText(t, 'Scurtătură');
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+  window.addEventListener('hashchange', readHash);
+
+  // Android: imaginea/textul trimis prin "Distribuie" e pus in cache de sw.js
+  async function readShared() {
+    const q = new URLSearchParams(location.search);
+    if (!q.has('shared') || !('caches' in window)) return;
+    history.replaceState(null, '', location.pathname);
+    const cache = await caches.open('shared');
+    const img = await cache.match('shared-image');
+    const txt = await cache.match('shared-text');
+    if (img) { await cache.delete('shared-image'); ocrImage(await img.blob()); }
+    else if (txt) { await cache.delete('shared-text'); applyText(await txt.text(), 'Distribuit'); }
+  }
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // Ce trimite aplicația de iPhone: cursele din notificări, textul din clipboard / din captură
+  window.MeritaNative = {
+    receive(events) {
+      (events || []).forEach(ev => {
+        if (ev.type === 'add' && ev.trip) J.trips.importTrips([ev.trip]);
+        else if (ev.type === 'status') J.trips.setStatus(+ev.id, ev.status);
+      });
+      renderCalendar();
+      return (events || []).length;
+    },
+    pasted(t) { if (t && t.trim()) applyText(t, 'Clipboard'); else setStatus('Clipboard gol.'); },
+    ocr(t) { if (t && t.trim()) applyText(t, 'Imagine'); else setStatus('Nu am găsit text în imagine.'); },
+    status(t) { setStatus(t); },
+  };
+
+  fillSettings(); updateShiftButton(); renderCalendar(); recompute(); readHash(); readShared();
+})();
+</script>
+</body>
+</html>

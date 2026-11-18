@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Merită?</string>
+    <string name="service_label">Merită? – citire comenzi</string>
+    <string name="service_description">Citește textul comenzilor din Glovo, Wolt, Uber Eats și Bolt Food și îți arată profitul net, RON/km și RON/oră într-o bulă peste aplicație. Textul nu părăsește telefonul.</string>
+</resources>
